@@ -4,3 +4,354 @@ https://xd.adobe.com/view/07d4889f-f5b6-43f3-96d0-5be34d01f51b-5287/screen/c25f0
 
 member ui
 https://xd.adobe.com/view/76b7359b-1385-49d1-9549-f12595ee56cc-23e4/screen/80a27a2b-0c3b-499d-adf1-4810505a4708/
+
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @default(uuid())
+  profile      Profile?
+  email        String         @unique
+  role         Role
+  user_secret  UserSecret?
+  session      Session[]
+  userOne      Chat[]         @relation("userOne")
+  userTwo      Chat[]         @relation("userTwo")
+  Message      Message[]
+  UserSettings UserSettings?
+  Subscription Subscription[]
+  Referral     Referral[]
+}
+
+model Profile {
+  id                     String                  @id @default(uuid())
+  profileImage           String
+  firstName              String
+  lastName               String
+  dateOfBirth            DateTime
+  gender                 String
+  address                String
+  longitude              Float
+  latitude               Float
+  about                  String
+  user                   User                    @relation(fields: [userId], references: [id])
+  userId                 String                  @unique
+  Member                 Member?
+  ServiceProviderProfile ServiceProviderProfile?
+}
+
+model UserSecret {
+  id       String @id @default(uuid())
+  password String
+  otp      String
+  secret   User   @relation(fields: [userId], references: [id]) // references `id` of `Profile`
+  userId   String @unique
+}
+
+model Session {
+  id           String @id @default(uuid())
+  refreshToken String
+  user_session User   @relation(fields: [userId], references: [id])
+  userId       String
+}
+
+model Referral {
+  id           String @id @default(uuid())
+  referralCode String
+  // referralLink String
+  user         User   @relation(fields: [userId], references: [id])
+  userId       String
+}
+
+model Member {
+  id                     String                   @id @default(uuid())
+  role                   Role
+  profile                Profile                  @relation(fields: [profileId], references: [id])
+  profileId              String                   @unique
+  ratingAndReview        RatingAndReview[]
+  ServiceProviderProfile ServiceProviderProfile[]
+  // gigWorkerProfile       gigWorkerProfile[]
+  DisputePayment         DisputePayment[]
+  BookMark               BookMark[]
+  Job                    Job[]
+  InvitedUser            InvitedUser[]
+  paymentDetail          PaymentDetails[]
+}
+
+model BookMark {
+  id              String                 @id @default(uuid())
+  isBookMarked    Boolean
+  member          Member                 @relation(fields: [memberId], references: [id])
+  memberId        String
+  // gigWorker       gigWorkerProfile       @relation(fields: [gigId], references: [id])
+  // gigId           String
+  serviceProvider ServiceProviderProfile @relation(fields: [serviceId], references: [id])
+  serviceId       String
+}
+
+model ServiceProviderProfile {
+  id String @id @default(uuid())
+
+  selectProfession      String
+  completedJob          Int?
+  companyName           String
+  licenseNumber         String
+  isFaceVerified        Boolean
+  professionalDocuments Documents         @relation(fields: [documentId], references: [id])
+  documentId            String
+  member                Member            @relation(fields: [memberId], references: [id])
+  memberId              String
+  availablityDate       DateTime
+  avaialableTime        DateTime
+  user                  Profile           @relation(fields: [profileId], references: [id])
+  profileId             String            @unique
+  BookMark              BookMark[]
+  RatingAndReview       RatingAndReview[]
+  InvitedUser           InvitedUser[]
+  job                   Job[]
+  Category              Category[]
+  PaymentDetails        PaymentDetails[]
+  BookMarkJob           BookMarkJob[]
+}
+
+model BookMarkJob {
+  id              String                 @id @default(uuid())
+  isBookMarked    Boolean
+  job             Job                    @relation(fields: [jobId], references: [id])
+  jobId           String
+  // gigWorker       gigWorkerProfile       @relation(fields: [gigId], references: [id])
+  // gigId           String
+  serviceProvider ServiceProviderProfile @relation(fields: [serviceId], references: [id])
+  serviceId       String
+}
+
+// model gigWorkerProfile {
+//   id              String            @id @default(uuid())
+//   idNumber        String
+//   insuranceNumber String
+//   jobCategory     Category[]
+//   isFaceVerified  Boolean
+//   completedJob    Int?
+//   // availablityDate DateTime
+//   // avaialableTime  DateTime
+//   member          Member            @relation(fields: [memberId], references: [id])
+//   memberId        String
+//   createdAt       DateTime          @default(now())
+//   Documents       Documents?        @relation(fields: [documentsId], references: [id])
+//   documentsId     String?
+//   BookMark        BookMark[]
+//   RatingAndReview RatingAndReview[]
+//   InvitedUser     InvitedUser[]
+//   PaymentDetails  PaymentDetails[]
+// }
+
+model Documents {
+  id                     String                   @id @default(uuid())
+  documents              String
+  serviceProviderProfile ServiceProviderProfile[]
+  // gigWorker              gigWorkerProfile[]
+  createdAt              DateTime
+  updatedAt              DateTime
+}
+
+model Subscription {
+  id           String         @id @default(uuid())
+  pkgName      String
+  price        Int
+  details      String
+  user         User           @relation(fields: [userId], references: [id])
+  userId       String
+  createdAt    DateTime       @default(now())
+  UserSettings UserSettings[]
+}
+
+model Chat {
+  id        String    @id @default(uuid())
+  userOneId String
+  userTwoId String
+  userOne   User      @relation(fields: [userOneId], references: [id], name: "userOne")
+  userTwo   User      @relation(fields: [userTwoId], references: [id], name: "userTwo")
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now())
+}
+
+model Message {
+  id        String    @id @default(uuid())
+  message   String
+  chat_msgs Chat      @relation(fields: [chatId], references: [id])
+  chatId    String
+  sender    User      @relation(fields: [senderId], references: [id])
+  senderId  String
+  seen      Boolean   @default(false)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model RatingAndReview {
+  id                String                 @id @default(uuid())
+  comment           String
+  rating            Int
+  members           Member                 @relation(fields: [memberId], references: [id])
+  memberId          String
+  serviceProvider   ServiceProviderProfile @relation(fields: [serviceProviderId], references: [id])
+  serviceProviderId String
+  // gigWorkerProfile   gigWorkerProfile       @relation(fields: [gigWorkerProfileId], references: [id])
+  // gigWorkerProfileId String
+  createdAt         DateTime               @default(now())
+}
+
+model helpFeedBack {
+  id        String   @id @default(uuid())
+  subject   String
+  message   String
+  image     String
+  createdAt DateTime @default(now())
+}
+
+model Settings {
+  id              String   @id @default(uuid())
+  privacyPolicy   String
+  termsConditions String
+  aboutApp        String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model UserSettings {
+  id                String       @id @default(uuid())
+  notifications     Boolean      @default(true)
+  user              User         @relation(fields: [userId], references: [id])
+  userId            String       @unique
+  subscriptionPlans Subscription @relation(fields: [subscriptionId], references: [id])
+  subscriptionId    String
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @default(now())
+}
+
+model Job {
+  id                String                 @id @default(uuid())
+  // workerType        WorkerType
+  jobTitle          String
+  jobDate           DateTime
+  jobTime           String
+  jobDescription    String
+  image             Images                 @relation(fields: [imageId], references: [id])
+  imageId           String
+  longitude         Float
+  latitude          Float
+  jobtype           jobType
+  payType           payType
+  budgetFrom        Float
+  budgetTo          Float
+  status            jobStatus
+  member            Member                 @relation(fields: [memberId], references: [id])
+  memberId          String
+  serviceProvider   ServiceProviderProfile @relation(fields: [serviceProviderId], references: [id])
+  serviceProviderId String
+  Reason            Reason?
+  category          Category?
+  isDeleted         Boolean
+  createdAt         DateTime               @default(now())
+  updatedTime       DateTime
+  BookMarkJob       BookMarkJob[]
+}
+
+model Images {
+  id     String @id @default(uuid())
+  images String
+  job    Job[]
+}
+
+model Category {
+  id                String                 @id @default(uuid())
+  category          String
+  jobCategory       Job                    @relation(fields: [jobId], references: [id])
+  jobId             String                 @unique
+  // gigWorker         gigWorkerProfile       @relation(fields: [gigWorkerId], references: [id])
+  // gigWorkerId       String
+  serviceProvider   ServiceProviderProfile @relation(fields: [serviceProviderId], references: [id])
+  serviceProviderId String
+}
+
+model InvitedUser {
+  id                String                 @id @default(uuid())
+  serviceProvider   ServiceProviderProfile @relation(fields: [serviceProviderId], references: [id])
+  serviceProviderId String
+  // gigWorker         gigWorkerProfile       @relation(fields: [gigWorkerId], references: [id])
+  // gigWorkerId       String
+  member            Member                 @relation(fields: [memberId], references: [id])
+  memberId          String
+  createdAt         DateTime               @default(now())
+}
+
+model Reason {
+  id           String   @id @default(uuid())
+  selectReason String
+  description  String?
+  createJob    Job      @relation(fields: [jobId], references: [id])
+  jobId        String   @unique
+  createdAt    DateTime @default(now())
+}
+
+model DisputePayment {
+  id          String   @id @default(uuid())
+  dispute     String
+  description String?
+  member      Member   @relation(fields: [memberId], references: [id])
+  memberId    String
+  createdAt   DateTime @default(now())
+}
+
+model PaymentDetails {
+  id                String                  @id @default(uuid())
+  jobTitle          String
+  name              String
+  paymentMethod     String
+  payAmount         Int
+  date              DateTime                @default(now())
+  time              String
+  user              Member?                 @relation(fields: [memberId], references: [id])
+  memberId          String
+  // gigWorker         gigWorkerProfile?       @relation(fields: [gigWorkerId], references: [id])
+  // gigWorkerId       String
+  serviceProvider   ServiceProviderProfile? @relation(fields: [serviceProviderId], references: [id])
+  serviceProviderId String
+}
+
+enum jobType {
+  WORKINGHOURS
+  AFTERHOURS
+}
+
+enum jobStatus {
+  APPLIED
+  UPCOMING
+  OPEN
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum payType {
+  FIXED
+  PAYHOURLY
+}
+
+enum Role {
+  MEMEBERS
+  SERVICEPROVIDER
+  GIGWORKER
+}
